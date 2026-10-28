@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard - Hotel Control Center{% endblock %}
+{% block content %}
+<div class="dashboard-heading mb-4 pb-2 border-bottom">
+  <div>
+    <div class="eyebrow text-warning">HOTEL MANAGEMENT SYSTEM</div>
+    <h1 class="section-title">Administrator Dashboard</h1>
+    <p class="text-muted">Central control hub for rooms inventory, guest reservations, customer accounts, and DBMS analytics.</p>
+  </div>
+  <div>
+    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-2 rounded-pill fw-bold">
+      <i class="fa-solid fa-shield-halved me-1"></i> ADMIN ACCESS GRANTED
+    </span>
+  </div>
+</div>
+
+<!-- Overarching KPI Metrics -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg">
+    <div class="stat-card shadow-sm border">
+      <span><i class="fa-solid fa-door-closed text-secondary me-1"></i> Total Inventory</span>
+      <strong class="stat-value text-dark">{{ stats.total_rooms or 0 }}</strong>
+      <small>Total rooms in property</small>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg">
+    <div class="stat-card shadow-sm border">
+      <span><i class="fa-solid fa-circle-check text-success me-1"></i> Available</span>
+      <strong class="stat-value text-success">{{ stats.available_rooms or 0 }}</strong>
+      <small>Ready for check-in</small>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg">
+    <div class="stat-card shadow-sm border">
+      <span><i class="fa-solid fa-lock text-danger me-1"></i> Booked</span>
+      <strong class="stat-value text-danger">{{ stats.booked_rooms or 0 }}</strong>
+      <small>Currently reserved</small>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg">
+    <div class="stat-card shadow-sm border">
+      <span><i class="fa-solid fa-calendar-check text-primary me-1"></i> Active Bookings</span>
+      <strong class="stat-value text-primary">{{ stats.confirmed_bookings or 0 }}</strong>
+      <small>Confirmed reservations</small>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg">
+    <div class="stat-card shadow-sm border">
+      <span><i class="fa-solid fa-users text-info me-1"></i> Customers</span>
+      <strong class="stat-value text-info">{{ stats.total_customers or 0 }}</strong>
+      <small>Registered guests</small>
+    </div>
+  </div>
+  <div class="col-sm-12 col-lg">
+    <div class="stat-card shadow-sm border">
+      <span><i class="fa-solid fa-indian-rupee-sign text-warning me-1"></i> Revenue</span>
+      <strong class="stat-value text-warning fs-4">{{ stats.revenue|money }}</strong>
+      <small>Total recorded earnings</small>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Management Action Cards -->
+<div class="row g-3 mb-5">
+  <div class="col-md-4 col-lg">
+    <a class="admin-link-card shadow-sm h-100" href="{{ url_for('admin_rooms') }}">
+      <span class="bg-success bg-opacity-10 text-success"><i class="fa-solid fa-door-open"></i></span>
+      <div>
+        <strong>Rooms Inventory</strong>
+        <small>Add, edit prices, amenities & status</small>
+      </div>
+      <b>→</b>
+    </a>
+  </div>
+  <div class="col-md-4 col-lg">
+    <a class="admin-link-card shadow-sm h-100" href="{{ url_for('admin_bookings') }}">
+      <span class="bg-primary bg-opacity-10 text-primary"><i class="fa-solid fa-book-bookmark"></i></span>
+      <div>
+        <strong>Manage Bookings</strong>
+        <small>Review, check-in, check-out & cancel</small>
+      </div>
+      <b>→</b>
+    </a>
+  </div>
+  <div class="col-md-4 col-lg">
+    <a class="admin-link-card shadow-sm h-100" href="{{ url_for('admin_users') }}">
+      <span class="bg-info bg-opacity-10 text-info"><i class="fa-solid fa-users-gear"></i></span>
+      <div>
+        <strong>Guest Accounts</strong>
+        <small>Manage customer accounts & status</small>
+      </div>
+      <b>→</b>
+    </a>
+  </div>
+  <div class="col-md-6 col-lg">
+    <a class="admin-link-card shadow-sm h-100" href="{{ url_for('admin_reports') }}">
+      <span class="bg-warning bg-opacity-10 text-warning"><i class="fa-solid fa-chart-pie"></i></span>
+      <div>
+        <strong>Financial Reports</strong>
+        <small>Monthly aggregates & Views</small>
+      </div>
+      <b>→</b>
+    </a>
+  </div>
+  <div class="col-md-6 col-lg">
+    <a class="admin-link-card shadow-sm h-100 border-danger border-opacity-25" href="{{ url_for('admin_database') }}">
+      <span class="bg-danger bg-opacity-10 text-danger"><i class="fa-solid fa-database"></i></span>
+      <div>
+        <strong class="text-danger">DBMS Diagnostics</strong>
+        <small>Triggers Audit, Cursors & Views</small>
+      </div>
+      <b>→</b>
+    </a>
+  </div>
+</div>
+
+<!-- Recent Reservations Table -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="h5 fw-bold mb-0"><i class="fa-solid fa-clock-rotate-left me-2 text-secondary"></i> Recent Reservations</h2>
+    <small class="text-muted">Latest bookings processed by the relational database.</small>
+  </div>
+  <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin_bookings') }}">
+    View All Bookings →
+  </a>
+</div>
+
+<div class="table-responsive table-shell shadow-sm">
+  <table class="table align-middle mb-0">
+    <thead>
+      <tr>
+        <th>Booking Ref</th>
+        <th>Guest Name</th>
+        <th>Room Details</th>
+        <th>Stay Period</th>
+        <th>Nights</th>
+        <th>Total Amount</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in bookings %}
+      <tr>
+        <td>
+          <span class="fw-bold">#{{ b.booking_id }}</span>
+          <div class="small text-muted">{{ b.created_at|format_date }}</div>
+        </td>
+        <td>
+          <strong>{{ b.full_name }}</strong>
+          <div class="small text-muted">{{ b.email }}</div>
+        </td>
+        <td>
+          <span class="badge bg-dark">{{ b.room_type }}</span> Room <strong>{{ b.room_number }}</strong>
+        </td>
+        <td>
+          <div>{{ b.check_in|format_date }} <small class="text-muted">({{ b.check_in_time or '12:00 PM' }})</small></div>
+          <div class="small text-muted">to {{ b.check_out|format_date }} <small class="text-muted">({{ b.check_out_time or '11:00 AM' }})</small></div>
+        </td>
+        <td>
+          <span class="badge bg-light text-dark border">{{ b.total_nights }} nts</span>
+        </td>
+        <td>
+          <span class="fw-bold text-success">{{ b.total_amount|money }}</span>
+        </td>
+        <td>
+          <span class="status status-{{ b.booking_status|lower|replace(' ', '-') }}">
+            {{ b.booking_status }}
+          </span>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" class="text-center py-4 text-muted">No reservations recorded in database yet.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Payment Request · Haven Hotel & Suites</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      background-color: #f1f5f3;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 16px 12px;
+    }
+    .payment-card {
+      max-width: 460px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(26, 77, 46, 0.1);
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      width: 100%;
+    }
+    .gateway-header {
+      background: linear-gradient(135deg, #1a4d2e 0%, #243c36 100%);
+      color: #ffffff;
+      padding: 24px 20px;
+      text-align: center;
+    }
+    .advance-banner {
+      background: #eef7f1;
+      border: 1px solid #cce5d5;
+      border-radius: 14px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .method-tab {
+      cursor: pointer;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px;
+      transition: all 0.2s ease;
+      background: #ffffff;
+    }
+    .method-tab:hover, .method-tab.active {
+      border-color: #1a4d2e;
+      background-color: #f7fbf8;
+    }
+    .method-radio:checked + .method-tab {
+      border-color: #1a4d2e;
+      background-color: #f7fbf8;
+      box-shadow: 0 0 0 1px #1a4d2e;
+    }
+    .btn-pay {
+      background-color: #1a4d2e;
+      color: #ffffff;
+      font-weight: 700;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      border: none;
+      transition: background-color 0.2s;
+    }
+    .btn-pay:hover {
+      background-color: #133922;
+      color: #ffffff;
+    }
+    .btn-decline {
+      background-color: transparent;
+      color: #64748b;
+      font-weight: 600;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      font-size: 0.9rem;
+    }
+    .btn-decline:hover {
+      background-color: #fee2e2;
+      color: #b91c1c;
+      border-color: #fca5a5;
+    }
+    .success-checkmark {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 16px;
+      background-color: #d1fae5;
+      color: #059669;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="payment-card">
+  <!-- Header -->
+  <div class="gateway-header">
+    <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+      <span style="font-size: 1.3rem;">🏨</span>
+      <span class="fw-bold tracking-wide" style="letter-spacing: 0.5px;">HAVEN HOTEL & SUITES</span>
+    </div>
+    <div class="small opacity-75">
+      <i class="fa-solid fa-lock me-1"></i> Dummy QR Payment Gateway · Same Wi-Fi
+    </div>
+  </div>
+
+  <div class="p-4" id="mainContent">
+    {% if already_paid or pay.status == 'Paid' %}
+      <!-- Already Paid Screen -->
+      <div class="text-center py-4">
+        <div class="success-checkmark">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <h3 class="h4 fw-bold text-success mb-2">Payment Already Completed!</h3>
+        <p class="text-muted small mb-4">
+          The 25% booking advance of <strong>{{ pay.amount|money }}</strong> for this reservation has already been confirmed.
+        </p>
+        <div class="card bg-light border-0 p-3 text-start small mb-4 rounded-3">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted">Booking Reference:</span>
+            <strong>#{{ pay.booking_id or 'Confirmed' }}</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted">Transaction ID:</span>
+            <span class="font-monospace">{{ pay.gateway_payment_id or 'PAY-QR-CONFIRMED' }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted">Room:</span>
+            <strong>{{ pay.room_type }} (Room {{ pay.room_number }})</strong>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Advance Paid:</span>
+            <strong class="text-success">{{ pay.amount|money }}</strong>
+          </div>
+        </div>
+        <div class="alert alert-info py-2 small mb-0">
+          <i class="fa-solid fa-circle-info me-1"></i> You can check the confirmation on your main screen.
+        </div>
+      </div>
+
+    {% elif pay.status == 'Failed' %}
+      <!-- Failed Screen -->
+      <div class="text-center py-4">
+        <div class="success-checkmark bg-danger-subtle text-danger">
+          <i class="fa-solid fa-xmark"></i>
+        </div>
+        <h3 class="h4 fw-bold text-danger mb-2">Payment Cancelled</h3>
+        <p class="text-muted small mb-4">
+          This payment request was cancelled or declined. You can rescan the QR code on your computer screen to try again.
+        </p>
+        <a href="javascript:location.reload();" class="btn btn-outline-dark btn-sm rounded-pill px-4">
+          <i class="fa-solid fa-rotate-right me-1"></i> Retry Payment
+        </a>
+      </div>
+
+    {% else %}
+      <!-- Active Payment Request Form -->
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="badge bg-warning text-dark px-2 py-1 fw-bold">
+          <i class="fa-solid fa-receipt me-1"></i> PAYMENT REQUEST
+        </span>
+        <span class="badge bg-secondary bg-opacity-10 text-secondary">
+          Ref: {{ pay.gateway_order_id[:16] }}...
+        </span>
+      </div>
+
+      <!-- Guest & Room Details -->
+      <div class="card bg-light border-0 p-3 rounded-3 mb-3 small">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+          <div>
+            <div class="fw-bold fs-6 text-dark">{{ pay.room_type }} Room</div>
+            <span class="text-muted">Room {{ pay.room_number }} · {{ pay.guest_count }} guest(s)</span>
+          </div>
+          <span class="badge bg-dark">{{ nights }} Night(s)</span>
+        </div>
+        <div class="d-flex justify-content-between text-muted mb-1">
+          <span>Guest Name:</span>
+          <strong class="text-dark">{{ pay.guest_name }}</strong>
+        </div>
+        <div class="d-flex justify-content-between text-muted mb-1">
+          <span>Check-in:</span>
+          <span>{{ pay.check_in|format_date }} ({{ pay.check_in_time or '12:00 PM' }})</span>
+        </div>
+        <div class="d-flex justify-content-between text-muted">
+          <span>Check-out:</span>
+          <span>{{ pay.check_out|format_date }} ({{ pay.check_out_time or '11:00 AM' }})</span>
+        </div>
+      </div>
+
+      <!-- Amount Callout -->
+      <div class="advance-banner">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="small text-muted text-uppercase fw-semibold">Advance to Pay (25%)</div>
+            <div class="fs-2 fw-bold text-success">{{ pay.amount|money }}</div>
+          </div>
+          <div class="text-end small text-muted">
+            <div>Total: {{ pay.total_amount|money }}</div>
+            <div>Bal: {{ balance_amount|money }} at check-in</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dummy Payment Method Selection -->
+      <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Select Payment Mode</h6>
+      <form id="dummyPayForm" method="post" action="{{ url_for('process_dummy_payment', order_id=pay.gateway_order_id) }}">
+        <input type="hidden" name="action" id="actionField" value="approve">
+
+        <div class="row g-2 mb-3">
+          <div class="col-4">
+            <input type="radio" class="btn-check method-radio" name="method" id="modeUpi" value="UPI / QR" checked>
+            <label class="method-tab text-center w-100" for="modeUpi">
+              <i class="fa-solid fa-qrcode text-success fs-4 d-block mb-1"></i>
+              <span class="small fw-bold">UPI Apps</span>
+            </label>
+          </div>
+          <div class="col-4">
+            <input type="radio" class="btn-check method-radio" name="method" id="modeCard" value="Credit/Debit Card">
+            <label class="method-tab text-center w-100" for="modeCard">
+              <i class="fa-solid fa-credit-card text-primary fs-4 d-block mb-1"></i>
+              <span class="small fw-bold">Card</span>
+            </label>
+          </div>
+          <div class="col-4">
+            <input type="radio" class="btn-check method-radio" name="method" id="modeNet" value="Net Banking">
+            <label class="method-tab text-center w-100" for="modeNet">
+              <i class="fa-solid fa-building-columns text-info fs-4 d-block mb-1"></i>
+              <span class="small fw-bold">NetBank</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Mode Specific Dummy Details -->
+        <div id="upiDetails" class="bg-light p-3 rounded-3 border mb-3 small">
+          <div class="fw-semibold mb-1 text-muted">Simulated UPI Apps:</div>
+          <div class="d-flex gap-2 flex-wrap mb-2">
+            <span class="badge bg-white text-dark border px-2 py-1"><i class="fa-brands fa-google text-danger me-1"></i> Google Pay</span>
+            <span class="badge bg-white text-dark border px-2 py-1"><i class="fa-solid fa-mobile-screen text-primary me-1"></i> PhonePe</span>
+            <span class="badge bg-white text-dark border px-2 py-1"><i class="fa-solid fa-wallet text-info me-1"></i> Paytm</span>
+          </div>
+          <div class="text-muted" style="font-size: 11px;">
+            Simulated Virtual Payment Address: <strong>{{ pay.guest_email.split('@')[0] }}@okhdfcbank</strong>
+          </div>
+        </div>
+
+        <div id="cardDetails" class="bg-light p-3 rounded-3 border mb-3 small d-none">
+          <div class="fw-semibold mb-1 text-muted">Simulated Test Card:</div>
+          <div class="font-monospace text-dark fw-bold mb-1">•••• •••• •••• 4242</div>
+          <div class="text-muted" style="font-size: 11px;">Valid Thru: 12/28 · CVV: 888</div>
+        </div>
+
+        <div id="netDetails" class="bg-light p-3 rounded-3 border mb-3 small d-none">
+          <div class="fw-semibold mb-1 text-muted">Simulated Banking Portal:</div>
+          <div class="text-dark fw-semibold">HDFC Bank Direct NetBanking</div>
+          <div class="text-muted" style="font-size: 11px;">One-click mock authorization</div>
+        </div>
+
+        <div id="errorAlert" class="alert alert-danger py-2 small d-none"></div>
+
+        <!-- Submit & Decline Buttons -->
+        <button type="submit" id="submitPayBtn" class="btn btn-pay w-100 mb-2 shadow-sm">
+          <i class="fa-solid fa-shield-check me-2"></i> Approve & Pay {{ pay.amount|money }}
+        </button>
+
+        <button type="button" id="declineBtn" class="btn btn-decline w-100">
+          <i class="fa-solid fa-ban me-1"></i> Cancel / Decline Payment
+        </button>
+      </form>
+    {% endif %}
+  </div>
+
+  <div class="bg-light text-center py-2 px-3 border-top small text-muted" style="font-size: 11px;">
+    Haven Hotel & Suites · 256-Bit SSL Mock Gateway · Local Network
+  </div>
+</div>
+
+<script>
+// Mode selector tabs
+const modeRadios = document.querySelectorAll('.method-radio');
+const upiDetails = document.getElementById('upiDetails');
+const cardDetails = document.getElementById('cardDetails');
+const netDetails = document.getElementById('netDetails');
+
+if (modeRadios) {
+  modeRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+      if (upiDetails) upiDetails.classList.add('d-none');
+      if (cardDetails) cardDetails.classList.add('d-none');
+      if (netDetails) netDetails.classList.add('d-none');
+
+      if (radio.value === 'UPI / QR' && upiDetails) upiDetails.classList.remove('d-none');
+      if (radio.value === 'Credit/Debit Card' && cardDetails) cardDetails.classList.remove('d-none');
+      if (radio.value === 'Net Banking' && netDetails) netDetails.classList.remove('d-none');
+    });
+  });
+}
+
+// Payment form submission
+const dummyForm = document.getElementById('dummyPayForm');
+const submitBtn = document.getElementById('submitPayBtn');
+const declineBtn = document.getElementById('declineBtn');
+const actionField = document.getElementById('actionField');
+const errorAlert = document.getElementById('errorAlert');
+const mainContent = document.getElementById('mainContent');
+
+if (dummyForm) {
+  dummyForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing Payment...';
+    if (declineBtn) declineBtn.disabled = true;
+    errorAlert.classList.add('d-none');
+
+    try {
+      const formData = new FormData(dummyForm);
+      const res = await fetch(dummyForm.action, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        mainContent.innerHTML = `
+          <div class="text-center py-4">
+            <div class="success-checkmark">
+              <i class="fa-solid fa-check"></i>
+            </div>
+            <h3 class="h4 fw-bold text-success mb-2">Payment Successful!</h3>
+            <p class="text-muted small mb-3">
+              ₹${parseFloat(data.amount).toLocaleString('en-IN', {minimumFractionDigits: 2})} advance payment received successfully.
+            </p>
+            <div class="card bg-light border-0 p-3 text-start small mb-4 rounded-3">
+              <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted">Booking Reference:</span>
+                <strong class="text-dark">#${data.booking_id}</strong>
+              </div>
+              <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted">Transaction ID:</span>
+                <span class="font-monospace">${data.tx_ref}</span>
+              </div>
+              <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted">Payment Mode:</span>
+                <span>${data.method}</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">Status:</span>
+                <span class="badge bg-success">Confirmed</span>
+              </div>
+            </div>
+            <div class="alert alert-success py-2 small mb-0">
+              <i class="fa-solid fa-circle-check me-1"></i> Your reservation is confirmed! You can now view your booking on the computer screen.
+            </div>
+          </div>
+        `;
+      } else {
+        errorAlert.textContent = data.message || 'Payment could not be processed.';
+        errorAlert.classList.remove('d-none');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-shield-check me-2"></i> Approve & Pay';
+        if (declineBtn) declineBtn.disabled = false;
+      }
+    } catch (err) {
+      console.warn("Mobile AJAX fetch failed, executing direct form submit fallback...", err);
+      // Fallback: submit form natively so mobile in-app browsers/webviews proceed smoothly
+      dummyForm.submit();
+    }
+  });
+
+  if (declineBtn) {
+    declineBtn.addEventListener('click', async function() {
+      if (!confirm('Are you sure you want to cancel this payment request?')) return;
+      actionField.value = 'decline';
+      submitBtn.disabled = true;
+      declineBtn.disabled = true;
+      try {
+        const formData = new FormData(dummyForm);
+        const res = await fetch(dummyForm.action, {
+          method: 'POST',
+          body: formData,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        location.reload();
+      } catch (err) {
+        console.warn("Decline fetch failed, submitting directly...", err);
+        dummyForm.submit();
+      }
+    });
+  }
+}
+</script>
+
+</body>
+</html>

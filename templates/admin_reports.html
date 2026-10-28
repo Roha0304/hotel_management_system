@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Financial & Booking Reports - Admin{% endblock %}
+{% block content %}
+<div class="dashboard-heading mb-4 pb-2 border-bottom">
+  <div>
+    <div class="eyebrow text-warning">DBMS ANALYTICS & INSIGHTS</div>
+    <h1 class="section-title">Reports & SQL Aggregations</h1>
+    <p class="text-muted">Explore relational database aggregations, views, and execute analytical stored procedures.</p>
+  </div>
+  <a class="btn btn-outline-dark" href="{{ url_for('admin_dashboard') }}">
+    <i class="fa-solid fa-arrow-left me-1"></i> Admin Dashboard
+  </a>
+</div>
+
+<!-- Stored Procedure Demonstration Panel -->
+<div class="card border-0 shadow-sm mb-5 bg-white">
+  <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+    <div class="fw-bold">
+      <i class="fa-solid fa-gears text-warning me-2"></i>
+      Execute Stored Procedure: <code>sp_monthly_booking_summary(p_year, p_month)</code>
+    </div>
+    <span class="badge bg-warning text-dark">DBMS Advanced Feature</span>
+  </div>
+  <div class="card-body p-4">
+    <p class="text-muted small mb-3">
+      This stored procedure performs server-side SQL aggregation for any specified year and month, calculating total reservations and recognized revenue without loading raw rows into application memory.
+    </p>
+    <form method="post" action="{{ url_for('admin_reports') }}" class="row g-3 align-items-end mb-3">
+      <input type="hidden" name="run_proc" value="1">
+      <div class="col-md-3">
+        <label class="form-label fw-semibold small">Target Year (IN p_year)</label>
+        <input class="form-control" type="number" name="proc_year" value="{{ proc_year }}" min="2020" max="2030" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold small">Target Month (IN p_month)</label>
+        <select class="form-select" name="proc_month">
+          {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if proc_month|string == m|string %}selected{% endif %}>
+              Month {{ m }} ({{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1] }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-dark w-100">
+          <i class="fa-solid fa-play me-1 text-warning"></i> Call Stored Procedure
+        </button>
+      </div>
+    </form>
+
+    {% if proc_result %}
+      <div class="p-3 rounded-3 border bg-light mt-3">
+        <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-clipboard-check text-success me-1"></i> Procedure Execution Output:</h6>
+        <div class="row g-3 text-center">
+          <div class="col-sm-4 col-md-2">
+            <div class="p-2 bg-white rounded border">
+              <small class="text-muted d-block">Total Bookings</small>
+              <strong class="fs-5">{{ proc_result.total_bookings or 0 }}</strong>
+            </div>
+          </div>
+          <div class="col-sm-4 col-md-2">
+            <div class="p-2 bg-white rounded border">
+              <small class="text-muted d-block">Confirmed</small>
+              <strong class="fs-5 text-primary">{{ proc_result.confirmed_count or 0 }}</strong>
+            </div>
+          </div>
+          <div class="col-sm-4 col-md-2">
+            <div class="p-2 bg-white rounded border">
+              <small class="text-muted d-block">Checked In</small>
+              <strong class="fs-5 text-info">{{ proc_result.checked_in_count or 0 }}</strong>
+            </div>
+          </div>
+          <div class="col-sm-4 col-md-2">
+            <div class="p-2 bg-white rounded border">
+              <small class="text-muted d-block">Checked Out</small>
+              <strong class="fs-5 text-secondary">{{ proc_result.checked_out_count or 0 }}</strong>
+            </div>
+          </div>
+          <div class="col-sm-4 col-md-2">
+            <div class="p-2 bg-white rounded border">
+              <small class="text-muted d-block">Cancelled</small>
+              <strong class="fs-5 text-danger">{{ proc_result.cancelled_count or 0 }}</strong>
+            </div>
+          </div>
+          <div class="col-sm-4 col-md-2">
+            <div class="p-2 bg-white rounded border">
+              <small class="text-muted d-block">Revenue</small>
+              <strong class="fs-5 text-success">{{ proc_result.recognized_revenue|money }}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- View 1: Monthly Booking Summary -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="h5 fw-bold mb-0">Monthly Booking Summary</h2>
+    <small class="text-muted">Queried directly from MySQL Database View: <code>vw_monthly_booking_summary</code></small>
+  </div>
+  <span class="badge bg-light text-dark border">SQL VIEW</span>
+</div>
+
+<div class="table-responsive table-shell shadow-sm mb-5">
+  <table class="table align-middle mb-0">
+    <thead>
+      <tr>
+        <th>Billing Month</th>
+        <th>Total Bookings</th>
+        <th>Confirmed</th>
+        <th>Checked In</th>
+        <th>Checked Out</th>
+        <th>Cancelled</th>
+        <th>Recognized Revenue</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in monthly %}
+      <tr>
+        <td class="fw-bold">{{ r.booking_month }}</td>
+        <td>{{ r.total_bookings }}</td>
+        <td><span class="badge bg-primary">{{ r.confirmed_bookings }}</span></td>
+        <td><span class="badge bg-info text-dark">{{ r.checked_in_bookings }}</span></td>
+        <td><span class="badge bg-secondary">{{ r.checked_out_bookings }}</span></td>
+        <td><span class="badge bg-danger">{{ r.cancelled_bookings }}</span></td>
+        <td><span class="fw-bold text-success fs-6">{{ r.revenue|money }}</span></td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" class="text-center py-4 text-muted">No monthly records in database yet.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Aggregates with GROUP BY & HAVING -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="h5 fw-bold mb-0">Room Category Financial Performance</h2>
+    <small class="text-muted">Computed using SQL Aggregates: <code>COUNT()</code>, <code>SUM()</code>, <code>AVG()</code> with <code>GROUP BY room_type</code></small>
+  </div>
+  <span class="badge bg-light text-dark border">GROUP BY CLAUSE</span>
+</div>
+
+<div class="table-responsive table-shell shadow-sm">
+  <table class="table align-middle mb-0">
+    <thead>
+      <tr>
+        <th>Room Category</th>
+        <th>Total Bookings</th>
+        <th>Average Nightly Rate</th>
+        <th>Cumulative Revenue</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in room_types %}
+      <tr>
+        <td>
+          <span class="badge bg-dark me-2">{{ r.room_type }}</span>
+          <strong>{{ r.room_type }} Rooms</strong>
+        </td>
+        <td>
+          <span class="badge bg-light text-dark border">{{ r.bookings }} reservation(s)</span>
+        </td>
+        <td>
+          {{ r.avg_rate|money }}
+        </td>
+        <td>
+          <strong class="text-success fs-6">{{ r.revenue|money }}</strong>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

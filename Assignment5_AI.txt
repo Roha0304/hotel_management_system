@@ -1,0 +1,114 @@
+import heapq
+
+# Step 1: Define the weighted graph
+graph = {
+    'A': {'B': 1, 'C': 4},
+    'B': {'D': 2, 'E': 5},
+    'C': {'D': 1, 'F': 5},
+    'D': {'G': 3},
+    'E': {'G': 1},
+    'F': {'G': 1},
+    'G': {}
+}
+
+# Step 2: Define the heuristic values
+heuristic = {
+    'A': 6,
+    'B': 5,
+    'C': 4,
+    'D': 3,
+    'E': 1,
+    'F': 1,
+    'G': 0
+}
+
+
+def astar(start, goal, h):
+    # Priority queue: (f-value, tie-breaker, node)
+    counter = 0
+    frontier = [(h[start], counter, start)]
+
+    # Best known actual cost from start to each node
+    g_cost = {start: 0}
+
+    # Store each node's parent
+    parent = {start: None}
+
+    # Track expanded nodes
+    expanded = []
+    expanded_set = set()
+
+    while frontier:
+
+        # Get the node with the smallest f-value
+        f_value, _, current = heapq.heappop(frontier)
+
+        # Ignore outdated queue entries
+        if f_value != g_cost[current] + h[current]:
+            continue
+
+        # Ignore repeated expansions
+        if current in expanded_set:
+            continue
+
+        expanded.append(current)
+        expanded_set.add(current)
+
+        g = g_cost[current]
+        f = g + h[current]
+
+        print(
+            f"Expanded: {current} | "
+            f"g={g} | h={h[current]} | f={f}"
+        )
+
+        # Stop when the goal is selected
+        if current == goal:
+            print(f"\nGoal reached: {goal}")
+
+            # Reconstruct the path
+            path = []
+            node = goal
+
+            while node is not None:
+                path.append(node)
+                node = parent[node]
+
+            path.reverse()
+
+            print("Final path:", " -> ".join(path))
+            print("Total cost:", g_cost[goal])
+            print("Nodes expanded:", len(expanded))
+
+            return path, g_cost[goal], len(expanded)
+
+        # Examine neighbouring nodes
+        for neighbour, edge_cost in graph[current].items():
+
+            tentative_g = g_cost[current] + edge_cost
+
+            # Update only if this route is better
+            if tentative_g < g_cost.get(neighbour, float('inf')):
+
+                g_cost[neighbour] = tentative_g
+                parent[neighbour] = current
+
+                counter += 1
+                new_f = tentative_g + h[neighbour]
+
+                heapq.heappush(
+                    frontier,
+                    (new_f, counter, neighbour)
+                )
+
+    print("No route found.")
+    return None, float('inf'), len(expanded)
+
+
+# Step 3: Run A* from A to G
+print("A* ROUTE PLANNER")
+print("----------------")
+
+path, total_cost, nodes_expanded = astar(
+    'A', 'G', heuristic
+)

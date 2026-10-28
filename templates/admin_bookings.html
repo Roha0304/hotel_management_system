@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Manage Reservations - Admin{% endblock %}
+{% block content %}
+<div class="dashboard-heading mb-4 pb-2 border-bottom">
+  <div>
+    <div class="eyebrow text-warning">RESERVATIONS MANAGEMENT</div>
+    <h1 class="section-title">All Guest Bookings</h1>
+    <p class="text-muted">Manage guest stays, advance payments, perform check-in / check-out, or cancel reservations with unavoidable operational reasons.</p>
+  </div>
+  <a class="btn btn-outline-dark" href="{{ url_for('admin_dashboard') }}">
+    <i class="fa-solid fa-arrow-left me-1"></i> Admin Dashboard
+  </a>
+</div>
+
+<div class="alert alert-info py-2 px-3 small d-flex align-items-center justify-content-between mb-4 shadow-sm">
+  <div>
+    <i class="fa-solid fa-bolt text-warning me-2"></i>
+    <strong>DBMS Trigger Active:</strong> Any status change automatically invokes the database trigger <code>trg_booking_status_audit</code> to record the audit log!
+  </div>
+  <a href="{{ url_for('admin_database') }}" class="btn btn-xs btn-outline-primary text-decoration-none py-1 px-2" style="font-size: 0.75rem;">
+    View Trigger Audit Trail →
+  </a>
+</div>
+
+<!-- Filter Pills -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <span class="small fw-semibold text-muted align-self-center me-2">Filter by Status:</span>
+  <a href="{{ url_for('admin_bookings') }}" class="btn btn-sm {% if not status_filter %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+    All ({{ bookings|length }})
+  </a>
+  {% for st in ['Confirmed', 'Checked In', 'Checked Out', 'Cancelled'] %}
+    <a href="{{ url_for('admin_bookings', status=st) }}" class="btn btn-sm {% if status_filter == st %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+      {{ st }}
+    </a>
+  {% endfor %}
+</div>
+
+<!-- Bookings Table -->
+<div class="table-responsive table-shell shadow-sm">
+  <table class="table align-middle mb-0">
+    <thead>
+      <tr>
+        <th>Booking Ref</th>
+        <th>Guest Information</th>
+        <th>Room Reserved</th>
+        <th>Stay Period</th>
+        <th>Financials (25% Advance)</th>
+        <th>Lifecycle Status & Operational Update</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in bookings %}
+      <tr>
+        <td>
+          <span class="fw-bold fs-6">#{{ b.booking_id }}</span>
+          <div class="small text-muted">{{ b.created_at|format_date }}</div>
+        </td>
+        <td>
+          <div class="fw-semibold">{{ b.full_name }}</div>
+          <div class="small text-muted"><i class="fa-regular fa-envelope me-1"></i>{{ b.email }}</div>
+          {% if b.phone %}<div class="small text-muted"><i class="fa-solid fa-phone me-1"></i>{{ b.phone }}</div>{% endif %}
+        </td>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <img src="{{ b.image_url }}" alt="{{ b.room_type }}" 
+                 class="rounded-3 border" style="width: 50px; height: 40px; object-fit: cover;"
+                 onerror="this.src='https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80';">
+            <div>
+              <span class="badge bg-dark">{{ b.room_type }}</span> Room <strong>{{ b.room_number }}</strong>
+              <div class="small text-muted">{{ b.guest_count }} guest(s)</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div>{{ b.check_in|format_date }} <small class="text-muted">({{ b.check_in_time or '12:00 PM' }})</small></div>
+          <div class="small text-muted">to {{ b.check_out|format_date }} <small class="text-muted">({{ b.check_out_time or '11:00 AM' }})</small></div>
+          <span class="badge bg-light text-dark border mt-1">{{ b.total_nights }} night(s)</span>
+        </td>
+        <td>
+          <div class="fw-bold text-dark">Total: {{ b.total_amount|money }}</div>
+          <div class="small text-success fw-semibold">
+            <i class="fa-solid fa-check-circle me-1"></i> Advance: {{ b.advance_paid|money }}
+          </div>
+          <div class="small text-muted">
+            Balance: {{ b.balance_amount|money }} ({{ b.payment_mode }})
+          </div>
+        </td>
+        <td style="min-width: 320px;">
+          <form method="post" action="{{ url_for('admin_bookings') }}" class="p-2 bg-light rounded border">
+            <input type="hidden" name="booking_id" value="{{ b.booking_id }}">
+            <div class="d-flex gap-2 mb-2">
+              <select class="form-select form-select-sm" name="booking_status" id="status_sel_{{ b.booking_id }}" 
+                      onchange="toggleReasonInput('{{ b.booking_id }}')">
+                {% for s in ['Confirmed', 'Checked In', 'Checked Out', 'Cancelled'] %}
+                  <option value="{{ s }}" {% if b.booking_status == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn btn-sm btn-dark" title="Save Status">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Save
+              </button>
+            </div>
+
+            <!-- Optional Cancellation Reason -->
+            <div id="reason_wrap_{{ b.booking_id }}" class="{% if b.booking_status != 'Cancelled' %}d-none{% endif %}">
+              <label class="form-label small fw-semibold text-danger mb-1">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i> Admin Cancellation Reason:
+              </label>
+              <select class="form-select form-select-sm mb-1" name="cancellation_reason">
+                <option value="Cancelled by Hotel Administration due to unavoidable operational/maintenance reasons." 
+                        {% if 'unavoidable operational' in (b.cancellation_reason or '') %}selected{% endif %}>
+                  Unavoidable operational/maintenance reasons (Default)
+                </option>
+                <option value="Cancelled by Hotel Administration due to urgent structural and safety maintenance."
+                        {% if 'structural' in (b.cancellation_reason or '') %}selected{% endif %}>
+                  Urgent structural & safety maintenance
+                </option>
+                <option value="Cancelled due to emergency property protocols; 100% advance refunded."
+                        {% if 'emergency' in (b.cancellation_reason or '') %}selected{% endif %}>
+                  Emergency property protocols
+                </option>
+              </select>
+            </div>
+          </form>
+
+          {% if b.booking_status == 'Cancelled' and b.cancellation_reason %}
+            <div class="small text-danger mt-1">
+              <strong>Logged Reason:</strong> {{ b.cancellation_reason }}
+            </div>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" class="text-center py-5 text-muted">No reservations found for this filter.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+function toggleReasonInput(id) {
+  var sel = document.getElementById('status_sel_' + id);
+  var wrap = document.getElementById('reason_wrap_' + id);
+  if (sel.value === 'Cancelled') {
+    wrap.classList.remove('d-none');
+  } else {
+    wrap.classList.add('d-none');
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Manage Rooms Inventory - Admin{% endblock %}
+{% block content %}
+<div class="dashboard-heading mb-4 pb-2 border-bottom">
+  <div>
+    <div class="eyebrow text-warning">ROOM INVENTORY CONTROL</div>
+    <h1 class="section-title">Rooms Management</h1>
+    <p class="text-muted">Maintain physical room inventory, set pricing, adjust capacities, assign room photos, and update maintenance status.</p>
+  </div>
+  <a class="btn btn-outline-dark" href="{{ url_for('admin_dashboard') }}">
+    <i class="fa-solid fa-arrow-left me-1"></i> Admin Dashboard
+  </a>
+</div>
+
+<!-- Add Room Panel -->
+<div class="form-panel mb-4 shadow-sm">
+  <h2 class="h5 fw-bold mb-3"><i class="fa-solid fa-plus-circle text-success me-2"></i> Add New Room to Inventory</h2>
+  <form method="post" action="{{ url_for('admin_rooms') }}" class="row g-3">
+    <input type="hidden" name="action" value="add">
+    
+    <div class="col-md-2">
+      <label class="form-label fw-semibold small">Room Number *</label>
+      <input class="form-control" name="room_number" required maxlength="10" placeholder="e.g. 601">
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label fw-semibold small">Room Category *</label>
+      <select class="form-select" name="room_type">
+        {% for t in ['Standard', 'Deluxe', 'Suite', 'Family', 'Executive'] %}
+          <option value="{{ t }}">{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label fw-semibold small">Max Guests *</label>
+      <input class="form-control" name="capacity" type="number" min="1" max="10" value="2" required>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label fw-semibold small">Price / Night (₹) *</label>
+      <input class="form-control" name="price_per_night" type="number" min="1" step="0.01" value="2500.00" required>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label fw-semibold small">Initial Status *</label>
+      <select class="form-select" name="status">
+        <option value="Available">Available</option>
+        <option value="Booked">Booked</option>
+        <option value="Occupied">Occupied</option>
+        <option value="Maintenance">Maintenance</option>
+        <option value="Inactive">Inactive</option>
+      </select>
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label fw-semibold small">Room Photo URL</label>
+      <input class="form-control" name="image_url" placeholder="https://images.unsplash.com/photo-...">
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label fw-semibold small">Amenities Description</label>
+      <input class="form-control" name="amenities" maxlength="500" 
+             placeholder="e.g. Free High-Speed Wi-Fi, 55' OLED Smart TV, Mini bar, Balcony view, Attached bath">
+    </div>
+
+    <div class="col-12 text-end">
+      <button type="submit" class="btn btn-dark px-4 shadow-sm">
+        <i class="fa-solid fa-check me-1"></i> Add Room to Database
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Rooms Table -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="h5 fw-bold mb-0">Current Room Inventory ({{ rooms|length }} Rooms)</h2>
+  <span class="badge bg-light text-dark border">Relational Entity: <code>rooms</code></span>
+</div>
+
+<div class="table-responsive table-shell shadow-sm">
+  <table class="table align-middle mb-0">
+    <thead>
+      <tr>
+        <th style="width: 70px;">Photo</th>
+        <th style="width: 80px;">Room #</th>
+        <th>Category</th>
+        <th>Capacity</th>
+        <th>Price / Night</th>
+        <th>Amenities & Photo URL</th>
+        <th>Status</th>
+        <th class="text-end" style="min-width: 140px;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rooms %}
+      <tr>
+        <td>
+          <img src="{{ r.image_url }}" alt="{{ r.room_number }}" class="rounded border" 
+               style="width: 50px; height: 40px; object-fit: cover;"
+               onerror="this.src='https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80';">
+        </td>
+        <td class="fw-bold fs-6">
+          <span class="badge bg-secondary mb-1">{{ r.room_number }}</span>
+          <div>
+            {% if r.status == 'Booked' %}
+              <span class="badge bg-danger"><i class="fa-solid fa-lock me-1"></i> Booked</span>
+            {% elif r.status == 'Occupied' %}
+              <span class="badge bg-primary"><i class="fa-solid fa-user-check me-1"></i> Occupied</span>
+            {% elif r.status == 'Available' %}
+              <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i> Available</span>
+            {% elif r.status == 'Maintenance' %}
+              <span class="badge bg-warning text-dark"><i class="fa-solid fa-wrench me-1"></i> Maint.</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ r.status }}</span>
+            {% endif %}
+          </div>
+        </td>
+        <td colspan="6">
+          <form method="post" action="{{ url_for('admin_rooms') }}" class="row g-2 align-items-center">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="room_id" value="{{ r.room_id }}">
+            
+            <div class="col-md-2">
+              <select class="form-select form-select-sm" name="room_type">
+                {% for t in ['Standard', 'Deluxe', 'Suite', 'Family', 'Executive'] %}
+                  <option value="{{ t }}" {% if r.room_type == t %}selected{% endif %}>{{ t }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-md-1">
+              <input class="form-control form-control-sm" type="number" min="1" max="10" name="capacity" value="{{ r.capacity }}" required title="Capacity">
+            </div>
+
+            <div class="col-md-2">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text">₹</span>
+                <input class="form-control form-control-sm" type="number" min="1" step="0.01" name="price_per_night" value="{{ r.price_per_night }}" required>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <input class="form-control form-control-sm mb-1" name="amenities" value="{{ r.amenities or '' }}" placeholder="Amenities">
+              <input class="form-control form-control-sm text-truncate" name="image_url" value="{{ r.image_url or '' }}" placeholder="Photo URL" title="Photo URL">
+            </div>
+
+            <div class="col-md-2">
+              <select class="form-select form-select-sm" name="status">
+                {% for s in ['Available', 'Booked', 'Occupied', 'Maintenance', 'Inactive'] %}
+                  <option value="{{ s }}" {% if r.status == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-md-2 d-flex justify-content-end gap-1">
+              <button type="submit" class="btn btn-sm btn-dark" title="Save Changes">
+                <i class="fa-solid fa-floppy-disk"></i> Save
+              </button>
+          </form>
+          <form method="post" action="{{ url_for('admin_rooms') }}" onsubmit="return confirm('Permanently delete room {{ r.room_number }}?');" class="d-inline">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="room_id" value="{{ r.room_id }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Room">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </form>
+            </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" class="text-center py-4 text-muted">No rooms currently in database.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

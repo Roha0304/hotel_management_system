@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Sign In - Haven Hotel & Suites{% endblock %}
+{% block content %}
+<div class="auth-wrap my-4 shadow-lg border-0">
+  <!-- Left Side: Luxury Hotel Showcase & Hospitality Benefits -->
+  <div class="auth-side p-4 p-md-5 d-flex flex-column justify-content-between">
+    <div>
+      <span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 px-3 py-1 rounded-pill small mb-2">
+        <i class="fa-solid fa-crown me-1"></i> FIVE-STAR LUXURY HOSPITALITY
+      </span>
+      <h1 class="display-6 fw-bold mt-2 text-white">Your Sanctuary of Pure Comfort</h1>
+      <p class="mt-2 text-white-50 small">
+        Welcome to Haven Hotel & Suites. Immerse yourself in thoughtfully curated suites, personalized concierge services, and seamless room reservations.
+      </p>
+
+      <!-- Hotel Features List -->
+      <div class="d-flex flex-column gap-3 mt-4">
+        <div class="d-flex align-items-center gap-3 p-2 rounded-3" style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.12);">
+          <div class="p-2 rounded bg-dark bg-opacity-50 text-warning">
+            <i class="fa-solid fa-bell-concierge fs-5"></i>
+          </div>
+          <div>
+            <strong class="text-white d-block small">Personalized Guest Concierge</strong>
+            <small class="text-white-50">24/7 dedicated service from check-in to departure.</small>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-3 p-2 rounded-3" style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.12);">
+          <div class="p-2 rounded bg-dark bg-opacity-50 text-success">
+            <i class="fa-solid fa-shield-halved fs-5"></i>
+          </div>
+          <div>
+            <strong class="text-white d-block small">Instant Booking Guarantee</strong>
+            <small class="text-white-50">Reserve any room with an easy 25% advance deposit.</small>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-3 p-2 rounded-3" style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.12);">
+          <div class="p-2 rounded bg-dark bg-opacity-50 text-warning">
+            <i class="fa-solid fa-bed fs-5"></i>
+          </div>
+          <div>
+            <strong class="text-white d-block small">Curated Suite Collection</strong>
+            <small class="text-white-50">Standard, Deluxe, Executive & Family accommodations.</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Testimonial Quote -->
+      <div class="mt-4 p-3 rounded-3" style="background: rgba(255, 255, 255, 0.05); border-left: 3px solid #d7b574;">
+        <div class="text-warning small mb-1">
+          <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+        </div>
+        <p class="text-white-50 small mb-1 fst-italic">"The most effortless hotel reservation experience. Pristine suites, transparent pricing, and exceptional hospitality."</p>
+        <small class="text-white fw-semibold">— Verified Guest Review</small>
+      </div>
+    </div>
+
+    <!-- Security & Trust Stamp -->
+    <div class="auth-stamp mt-4 pt-3 border-top border-white border-opacity-10 d-flex justify-content-between align-items-center text-white-50 small">
+      <span><i class="fa-solid fa-lock text-warning me-1"></i> 256-Bit SSL Encrypted</span>
+      <span>Haven Hospitality Group</span>
+    </div>
+  </div>
+
+  <!-- Right Side: Clean Authentication Form -->
+  <div class="auth-form p-4 p-md-5 d-flex flex-column justify-content-center">
+    <div class="mb-4">
+      <span class="eyebrow text-warning">SIGN IN</span>
+      <h2 class="h3 fw-bold mt-1 mb-1">Welcome Back</h2>
+      <p class="text-muted small mb-0">Enter your credentials to access your guest dashboard or admin portal.</p>
+    </div>
+    
+    <form method="post" action="{{ url_for('login') }}">
+      <div class="mb-3">
+        <label class="form-label fw-semibold small text-muted">Email or Username</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-user"></i></span>
+          <input class="form-control" type="text" name="email" id="login_input" required 
+                 placeholder="e.g. admin or john_doe" autocomplete="username">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold small text-muted">Password</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-lock"></i></span>
+          <input class="form-control" type="password" name="password" id="password_input" required 
+                 placeholder="Enter your password" autocomplete="current-password">
+          <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn" title="Toggle password visibility">
+            <i class="fa-solid fa-eye" id="togglePasswordIcon"></i>
+          </button>
+        </div>
+      </div>
+
+      
+
+      <button type="submit" class="btn btn-dark btn-lg w-100 shadow-sm py-3 mt-1">
+        <i class="fa-solid fa-right-to-bracket me-2 text-warning"></i> Sign In to Dashboard
+      </button>
+    </form>
+
+    <div class="mt-4 pt-3 border-top text-center">
+      <p class="small text-muted mb-0">Don't have a guest account? 
+        <a href="{{ url_for('register') }}" class="fw-bold text-dark text-decoration-none">Register here →</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+function fillCreds(login, pass) {
+  document.getElementById('login_input').value = login;
+  document.getElementById('password_input').value = pass;
+}
+
+// Toggle password visibility
+const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+const passwordInput = document.getElementById('password_input');
+const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+
+if (togglePasswordBtn && passwordInput && togglePasswordIcon) {
+  togglePasswordBtn.addEventListener('click', function() {
+    const isPassword = passwordInput.getAttribute('type') === 'password';
+    passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+    togglePasswordIcon.className = isPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+  });
+}
+</script>
+{% endblock %}

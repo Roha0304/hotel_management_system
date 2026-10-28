@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+{% block title %}DBMS & SQL Diagnostics Hub - Admin{% endblock %}
+{% block content %}
+<div class="dashboard-heading mb-4 pb-2 border-bottom">
+  <div>
+    <div class="eyebrow text-danger">ACADEMIC DBMS VERIFICATION HUB</div>
+    <h1 class="section-title">Database & SQL Diagnostics Hub</h1>
+    <p class="text-muted">Direct visibility and execution of Triggers, Cursors, Views, Indexes, and Relational Queries.</p>
+  </div>
+  <a class="btn btn-outline-dark" href="{{ url_for('admin_dashboard') }}">
+    <i class="fa-solid fa-arrow-left me-1"></i> Admin Dashboard
+  </a>
+</div>
+
+<!-- Tabs Navigation -->
+<ul class="nav nav-pills mb-4 gap-2" id="dbTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active fw-bold" id="trigger-tab" data-bs-toggle="pill" data-bs-target="#trigger-pane" type="button" role="tab">
+      <i class="fa-solid fa-bolt text-warning me-1"></i> 1. Triggers Audit Trail
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link fw-bold" id="cursor-tab" data-bs-toggle="pill" data-bs-target="#cursor-pane" type="button" role="tab">
+      <i class="fa-solid fa-arrows-spin text-info me-1"></i> 2. Cursor Row-by-Row Execution
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link fw-bold" id="views-tab" data-bs-toggle="pill" data-bs-target="#views-pane" type="button" role="tab">
+      <i class="fa-solid fa-table-list text-success me-1"></i> 3. Database Views
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link fw-bold" id="queries-tab" data-bs-toggle="pill" data-bs-target="#queries-pane" type="button" role="tab">
+      <i class="fa-solid fa-code text-primary me-1"></i> 4. SQL Queries Showcase
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content" id="dbTabsContent">
+
+  <!-- ================= TAB 1: TRIGGERS AUDIT TRAIL ================= -->
+  <div class="tab-pane fade show active" id="trigger-pane" role="tabpanel">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+        <span class="fw-bold"><i class="fa-solid fa-list-check text-warning me-2"></i> Real-Time Trigger Audit Log (Table: <code>booking_audit</code>)</span>
+        <span class="badge bg-warning text-dark">Automated MySQL Triggers</span>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          This table is <strong>never written to by application Python code</strong>. 
+          Rows are inserted automatically by two database triggers:
+          <br>
+          • <code>trg_booking_insert_audit</code>: Fires <code>AFTER INSERT ON bookings</code> when a reservation is created.
+          <br>
+          • <code>trg_booking_status_audit</code>: Fires <code>AFTER UPDATE ON bookings</code> when a reservation status changes.
+        </p>
+
+        <div class="table-responsive table-shell">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Audit ID</th>
+                <th>Booking Ref</th>
+                <th>Trigger Event</th>
+                <th>Old Status</th>
+                <th>New Status</th>
+                <th>Details</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for a in audit_logs %}
+              <tr>
+                <td class="fw-bold">#{{ a.audit_id }}</td>
+                <td><span class="badge bg-secondary">Booking #{{ a.booking_id }}</span></td>
+                <td>
+                  {% if a.action_type == 'BOOKING_CREATED' %}
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success">INSERT (Created)</span>
+                  {% else %}
+                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning">UPDATE (Status Change)</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if a.old_status %}
+                    <span class="status status-{{ a.old_status|lower|replace(' ', '-') }}">{{ a.old_status }}</span>
+                  {% else %}
+                    <span class="text-muted small">—</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="status status-{{ a.new_status|lower|replace(' ', '-') }}">{{ a.new_status }}</span>
+                </td>
+                <td class="small">{{ a.details }}</td>
+                <td class="small text-muted">{{ a.changed_at }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="7" class="text-center py-4 text-muted">No audit records yet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 2: CURSOR EXECUTION ================= -->
+  <div class="tab-pane fade" id="cursor-pane" role="tabpanel">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+        <span class="fw-bold"><i class="fa-solid fa-arrows-spin text-info me-2"></i> Execute Cursor Procedure: <code>sp_process_occupancy_cursor()</code></span>
+        <span class="badge bg-info text-dark">Row-by-Row Cursor</span>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Demonstrates advanced MySQL stored cursor handling:
+          <br>
+          <code>DECLARE room_cursor CURSOR FOR SELECT DISTINCT room_type FROM rooms ...</code>
+          <br>
+          <code>DECLARE CONTINUE HANDLER FOR NOT FOUND SET v_done = 1;</code>
+          <br>
+          The cursor opens, loops row-by-row through each room category, calculates metrics, and populates the <code>report_room_summary</code> table.
+        </p>
+
+        <form method="post" action="{{ url_for('admin_database') }}" class="mb-4">
+          <input type="hidden" name="action" value="run_cursor">
+          <button type="submit" class="btn btn-dark shadow-sm">
+            <i class="fa-solid fa-play me-2 text-warning"></i> Trigger Server-Side Cursor Recalculation
+          </button>
+        </form>
+
+        <h5 class="fw-bold fs-6 mb-3">Cursor Aggregation Table (<code>report_room_summary</code>)</h5>
+        <div class="table-responsive table-shell">
+          <table class="table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Summary ID</th>
+                <th>Room Category</th>
+                <th>Total Rooms</th>
+                <th>Available</th>
+                <th>Total Bookings</th>
+                <th>Total Revenue</th>
+                <th>Average Rate</th>
+                <th>Calculated At</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in cursor_results %}
+              <tr>
+                <td>#{{ row.summary_id }}</td>
+                <td><span class="badge bg-dark">{{ row.room_type }}</span></td>
+                <td>{{ row.total_rooms }}</td>
+                <td><span class="text-success fw-bold">{{ row.available_rooms }}</span></td>
+                <td>{{ row.total_bookings }}</td>
+                <td class="fw-bold text-success">{{ row.total_revenue|money }}</td>
+                <td>{{ row.average_rate|money }}</td>
+                <td class="small text-muted">{{ row.generated_at }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="8" class="text-center py-4 text-muted">Cursor report table is empty. Click button above to execute!</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 3: DATABASE VIEWS ================= -->
+  <div class="tab-pane fade" id="views-pane" role="tabpanel">
+    <!-- View 1: Active Reservations -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-dark text-white py-3">
+        <span class="fw-bold"><i class="fa-solid fa-table me-2 text-success"></i> View 1: <code>vw_active_reservations</code></span>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Pre-compiled JOIN view uniting <code>bookings</code>, <code>users</code>, and <code>rooms</code> with computed stay duration.
+        </p>
+        <div class="table-responsive table-shell">
+          <table class="table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Booking #</th>
+                <th>Guest</th>
+                <th>Contact</th>
+                <th>Room Details</th>
+                <th>Rate / Nt</th>
+                <th>Nights</th>
+                <th>Total Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for v in active_reservations %}
+              <tr>
+                <td class="fw-bold">#{{ v.booking_id }}</td>
+                <td>{{ v.guest_name }}</td>
+                <td class="small text-muted">{{ v.guest_email }}<br>{{ v.guest_phone or '—' }}</td>
+                <td><span class="badge bg-secondary">{{ v.room_type }}</span> Room {{ v.room_number }}</td>
+                <td>{{ v.price_per_night|money }}</td>
+                <td>{{ v.total_nights }} nts</td>
+                <td class="fw-bold text-success">{{ v.total_amount|money }}</td>
+                <td><span class="status status-{{ v.booking_status|lower|replace(' ', '-') }}">{{ v.booking_status }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- View 2: Room Inventory Status -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-dark text-white py-3">
+        <span class="fw-bold"><i class="fa-solid fa-table me-2 text-success"></i> View 2: <code>vw_room_inventory_status</code></span>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Aggregated view tracking room distribution, maintenance counts, and price spreads across categories.
+        </p>
+        <div class="table-responsive table-shell">
+          <table class="table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Total Rooms</th>
+                <th>Available</th>
+                <th>Maintenance</th>
+                <th>Inactive</th>
+                <th>Min Price</th>
+                <th>Max Price</th>
+                <th>Avg Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for i in room_inventory %}
+              <tr>
+                <td><strong>{{ i.room_type }}</strong></td>
+                <td>{{ i.total_rooms }}</td>
+                <td><span class="text-success fw-bold">{{ i.available_rooms }}</span></td>
+                <td><span class="text-warning fw-bold">{{ i.maintenance_rooms }}</span></td>
+                <td>{{ i.inactive_rooms }}</td>
+                <td>{{ i.min_price|money }}</td>
+                <td>{{ i.max_price|money }}</td>
+                <td class="fw-bold">{{ i.avg_price|money }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 4: SQL QUERIES SHOWCASE ================= -->
+  <div class="tab-pane fade" id="queries-pane" role="tabpanel">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-dark text-white py-3">
+        <span class="fw-bold"><i class="fa-solid fa-terminal text-primary me-2"></i> SQL Features Demonstrated in Project (Viva Reference)</span>
+      </div>
+      <div class="card-body">
+        <div class="accordion" id="sqlAccordion">
+          <!-- Accordion 1: CRUD -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#acc1">
+                1. Basic CRUD Queries (SELECT, INSERT, UPDATE, DELETE)
+              </button>
+            </h2>
+            <div id="acc1" class="accordion-collapse collapse show">
+              <div class="accordion-body bg-light">
+                <pre class="bg-dark text-light p-3 rounded mb-0"><code>-- 1. SELECT: Retrieve all available Deluxe rooms
+SELECT * FROM rooms WHERE status = 'Available' AND room_type = 'Deluxe';
+
+-- 2. INSERT: Add a new room with constraints
+INSERT INTO rooms (room_number, room_type, capacity, price_per_night, amenities, status)
+VALUES ('601', 'Suite', 3, 5500.00, 'Wi-Fi, Jacuzzi, Balcony', 'Available');
+
+-- 3. UPDATE: Update guest contact info
+UPDATE users SET phone = '+91 9999999999' WHERE user_id = 1002;
+
+-- 4. DELETE: Remove unused room
+DELETE FROM rooms WHERE room_id = 999;</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accordion 2: JOINS -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#acc2">
+                2. JOIN Operations (INNER JOIN & LEFT OUTER JOIN)
+              </button>
+            </h2>
+            <div id="acc2" class="accordion-collapse collapse">
+              <div class="accordion-body bg-light">
+                <pre class="bg-dark text-light p-3 rounded mb-0"><code>-- INNER JOIN: Bookings with User and Room entities
+SELECT b.booking_id, u.full_name, u.email, r.room_number, r.room_type, b.check_in, b.check_out, b.total_amount
+FROM bookings b
+INNER JOIN users u ON b.user_id = u.user_id
+INNER JOIN rooms r ON b.room_id = r.room_id
+WHERE b.booking_status = 'Confirmed';
+
+-- LEFT JOIN: Room category performance (including categories with zero bookings)
+SELECT r.room_type, COUNT(b.booking_id) AS total_bookings, COALESCE(SUM(b.total_amount), 0) AS revenue
+FROM rooms r
+LEFT JOIN bookings b ON r.room_id = b.room_id
+GROUP BY r.room_type;</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accordion 3: SUBQUERIES -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#acc3">
+                3. Nested Queries & Correlated Subqueries (NOT EXISTS)
+              </button>
+            </h2>
+            <div id="acc3" class="accordion-collapse collapse">
+              <div class="accordion-body bg-light">
+                <pre class="bg-dark text-light p-3 rounded mb-0"><code>-- Correlated subquery using NOT EXISTS for date collision detection:
+SELECT r.* FROM rooms r
+WHERE r.status = 'Available'
+AND NOT EXISTS (
+    SELECT 1 FROM bookings b
+    WHERE b.room_id = r.room_id
+      AND b.booking_status IN ('Confirmed', 'Checked In')
+      AND b.check_in < '2026-10-25' AND b.check_out > '2026-10-20'
+);
+
+-- Subquery in WHERE clause with IN:
+SELECT full_name, email FROM users
+WHERE user_id IN (
+    SELECT DISTINCT user_id FROM bookings WHERE total_amount > 10000
+);</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accordion 4: AGGREGATES & GROUP BY -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#acc4">
+                4. Aggregate Functions & GROUP BY with HAVING
+              </button>
+            </h2>
+            <div id="acc4" class="accordion-collapse collapse">
+              <div class="accordion-body bg-light">
+                <pre class="bg-dark text-light p-3 rounded mb-0"><code>-- Aggregation: Room pricing and counts by category with HAVING clause
+SELECT 
+  room_type,
+  COUNT(*) AS total_rooms,
+  MIN(price_per_night) AS lowest_rate,
+  MAX(price_per_night) AS highest_rate,
+  ROUND(AVG(price_per_night), 2) AS average_rate
+FROM rooms
+GROUP BY room_type
+HAVING COUNT(*) >= 2;</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accordion 5: STORED PROCEDURES & TRIGGERS -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#acc5">
+                5. Stored Procedures, Triggers & Cursors
+              </button>
+            </h2>
+            <div id="acc5" class="accordion-collapse collapse">
+              <div class="accordion-body bg-light">
+                <pre class="bg-dark text-light p-3 rounded mb-0"><code>-- Stored Procedure Call
+CALL sp_monthly_booking_summary(2026, 10);
+
+-- Trigger Definition (Status Audit)
+CREATE TRIGGER trg_booking_status_audit
+AFTER UPDATE ON bookings FOR EACH ROW
+BEGIN
+  IF OLD.booking_status <> NEW.booking_status THEN
+    INSERT INTO booking_audit (booking_id, action_type, old_status, new_status, details)
+    VALUES (NEW.booking_id, 'STATUS_CHANGED', OLD.booking_status, NEW.booking_status, 'Updated');
+  END IF;
+END;
+
+-- Cursor Procedure Call
+CALL sp_process_occupancy_cursor();</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accordion 6: INDEXES & SEQUENCES -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#acc6">
+                6. Indexes & Sequences (AUTO_INCREMENT)
+              </button>
+            </h2>
+            <div id="acc6" class="accordion-collapse collapse">
+              <div class="accordion-body bg-light">
+                <pre class="bg-dark text-light p-3 rounded mb-0"><code>-- Composite Index for Date Range Availability Search
+CREATE INDEX idx_booking_room_dates_status ON bookings (room_id, check_in, check_out, booking_status);
+
+-- Composite Index for Room Catalog Filtering
+CREATE INDEX idx_rooms_type_status_price ON rooms (room_type, status, price_per_night);
+
+-- Sequences (AUTO_INCREMENT starting values)
+ALTER TABLE users AUTO_INCREMENT = 1001;
+ALTER TABLE rooms AUTO_INCREMENT = 101;
+ALTER TABLE bookings AUTO_INCREMENT = 5001;</code></pre>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

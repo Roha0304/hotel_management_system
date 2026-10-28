@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block title %}Create Customer Account{% endblock %}
+{% block content %}
+<div class="narrow-card my-4 shadow-sm">
+  <div class="eyebrow text-warning">NEW GUEST REGISTRATION</div>
+  <h1 class="h2 fw-bold mt-2"><i class="fa-solid fa-user-plus text-primary me-2"></i>Create Customer Account</h1>
+  <p class="text-muted small">Sign up to explore suites, make real-time reservations, and manage your hotel bookings.</p>
+  
+  <div class="alert alert-light border py-2 px-3 small text-muted mb-3">
+    <i class="fa-solid fa-shield-halved text-success me-1"></i>
+    <strong>Email Verification:</strong> An OTP will be sent to your email to verify account ownership before registration.
+  </div>
+
+  <form method="post" action="{{ url_for('register') }}" id="registerForm">
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Full Name *</label>
+      <input class="form-control" name="full_name" required maxlength="100" placeholder="e.g. John Doe">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Choose Username *</label>
+      <input class="form-control" name="username" required maxlength="50" placeholder="e.g. john_doe">
+      <div class="form-text">Used for sign in. Must be unique.</div>
+    </div>
+
+    <!-- Email Address with Send OTP Button -->
+    <div class="mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <label class="form-label fw-semibold mb-0">Email Address *</label>
+        <span id="emailVerifiedBadge" class="badge bg-success bg-opacity-10 text-success border border-success d-none">
+          <i class="fa-solid fa-circle-check me-1"></i> Email Verified
+        </span>
+      </div>
+      <div class="input-group">
+        <span class="input-group-text"><i class="fa-regular fa-envelope"></i></span>
+        <input class="form-control" type="email" id="emailInput" name="email" required maxlength="150" placeholder="e.g. name@example.com">
+        <button class="btn btn-outline-dark" type="button" id="sendOtpBtn">
+          <i class="fa-solid fa-paper-plane me-1"></i> <span id="sendOtpBtnText">Send OTP</span>
+        </button>
+      <div id="emailFeedback" class="form-text">Click "Send OTP" to receive a 6-digit code on this email.</div>
+    </div>
+
+    <!-- OTP Section directly below Email -->
+    <div class="mb-3" id="otpSection">
+      <label class="form-label fw-semibold">Email Verification OTP *</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="fa-solid fa-key"></i></span>
+        <input class="form-control" type="text" id="otpInput" name="otp" required maxlength="6" pattern="[0-9]{6}" placeholder="Enter 6-digit OTP from email">
+        <button class="btn btn-dark" type="button" id="verifyOtpBtn">
+          <i class="fa-solid fa-check-double me-1"></i> Verify OTP
+        </button>
+      </div>
+      <div id="otpFeedback" class="form-text">Enter the 6-digit code sent to your email to verify.</div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Mobile Phone *</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
+        <input class="form-control" name="phone" required maxlength="20" placeholder="e.g. 9876543210" pattern="[0-9\+\s\-]{10,15}">
+      </div>
+      <div class="form-text">Must be a valid 10-digit mobile number.</div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Password * (minimum 6 characters)</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+        <input class="form-control" type="password" name="password" id="regPasswordInput" required minlength="6" autocomplete="new-password" placeholder="Create a secure password">
+        <button class="btn btn-outline-secondary" type="button" id="toggleRegPasswordBtn" title="Toggle password visibility">
+          <i class="fa-solid fa-eye" id="toggleRegPasswordIcon"></i>
+        </button>
+      </div>
+    </div>
+
+    <button type="submit" id="registerSubmitBtn" class="btn btn-dark btn-lg w-100 mt-3 shadow-sm">
+      <i class="fa-solid fa-user-check me-2"></i> Register Account
+    </button>
+  </form>
+
+  <div class="mt-4 pt-3 border-top text-center">
+    <p class="small text-muted mb-0">Already have an account? 
+      <a href="{{ url_for('login') }}" class="fw-bold text-decoration-none">Sign in here →</a>
+    </p>
+  </div>
+</div>
+
+<script>
+let isEmailVerified = false;
+let countdownTimer = null;
+
+const emailInput = document.getElementById('emailInput');
+const sendOtpBtn = document.getElementById('sendOtpBtn');
+const sendOtpBtnText = document.getElementById('sendOtpBtnText');
+const emailFeedback = document.getElementById('emailFeedback');
+const emailVerifiedBadge = document.getElementById('emailVerifiedBadge');
+
+const otpInput = document.getElementById('otpInput');
+const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+const otpFeedback = document.getElementById('otpFeedback');
+const registerForm = document.getElementById('registerForm');
+
+// Send OTP
+sendOtpBtn.addEventListener('click', async function() {
+  const email = emailInput.value.trim().toLowerCase();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRegex.test(email)) {
+    emailFeedback.textContent = '⚠️ Please enter a valid email address first.';
+    emailFeedback.className = 'form-text text-danger';
+    emailInput.focus();
+    return;
+  }
+
+  sendOtpBtn.disabled = true;
+  sendOtpBtnText.textContent = 'Sending...';
+  emailFeedback.textContent = 'Sending verification code to ' + email + '...';
+  emailFeedback.className = 'form-text text-primary';
+
+  try {
+    const formData = new FormData();
+    formData.append('email', email);
+
+    const res = await fetch("{{ url_for('send_otp') }}", {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      emailFeedback.textContent = '✓ ' + data.message;
+      emailFeedback.className = 'form-text text-success fw-semibold';
+      otpInput.value = '';
+      otpInput.focus();
+
+      // Start 60s cooldown timer
+      let timeLeft = 60;
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) {
+          clearInterval(countdownTimer);
+          sendOtpBtn.disabled = false;
+          sendOtpBtnText.textContent = 'Resend OTP';
+        } else {
+          sendOtpBtnText.textContent = `Resend in ${timeLeft}s`;
+        }
+      }, 1000);
+
+    } else {
+      emailFeedback.textContent = '✕ ' + (data.message || 'Could not send OTP.');
+      emailFeedback.className = 'form-text text-danger';
+      sendOtpBtn.disabled = false;
+      sendOtpBtnText.textContent = 'Send OTP';
+    }
+  } catch (err) {
+    emailFeedback.textContent = '✕ Connection error. Please try again.';
+    emailFeedback.className = 'form-text text-danger';
+    sendOtpBtn.disabled = false;
+    sendOtpBtnText.textContent = 'Send OTP';
+  }
+});
+
+// Verify OTP
+async function doVerifyOtp() {
+  const email = emailInput.value.trim().toLowerCase();
+  const otp = otpInput.value.trim();
+
+  if (!email) {
+    otpFeedback.textContent = '⚠️ Please enter and send OTP to your email first.';
+    otpFeedback.className = 'form-text text-danger';
+    return;
+  }
+  if (!otp || otp.length !== 6) {
+    otpFeedback.textContent = '⚠️ Please enter the full 6-digit OTP.';
+    otpFeedback.className = 'form-text text-danger';
+    return;
+  }
+
+  verifyOtpBtn.disabled = true;
+  verifyOtpBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Verifying...';
+
+  try {
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('otp', otp);
+
+    const res = await fetch("{{ url_for('verify_otp') }}", {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      isEmailVerified = true;
+      emailVerifiedBadge.classList.remove('d-none');
+      otpFeedback.textContent = '✓ Email verified successfully!';
+      otpFeedback.className = 'form-text text-success fw-bold';
+      otpInput.classList.add('is-valid');
+      otpInput.classList.remove('is-invalid');
+      emailInput.readOnly = true;
+      otpInput.readOnly = true;
+      sendOtpBtn.disabled = true;
+      verifyOtpBtn.disabled = true;
+      verifyOtpBtn.className = 'btn btn-success';
+      verifyOtpBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Verified';
+      clearInterval(countdownTimer);
+      sendOtpBtnText.textContent = 'Verified';
+    } else {
+      isEmailVerified = false;
+      otpFeedback.textContent = '✕ ' + (data.message || 'Invalid OTP code.');
+      otpFeedback.className = 'form-text text-danger fw-semibold';
+      otpInput.classList.add('is-invalid');
+      verifyOtpBtn.disabled = false;
+      verifyOtpBtn.innerHTML = '<i class="fa-solid fa-check-double me-1"></i> Verify OTP';
+    }
+  } catch (err) {
+    otpFeedback.textContent = '✕ Verification request failed. Try again.';
+    otpFeedback.className = 'form-text text-danger';
+    verifyOtpBtn.disabled = false;
+    verifyOtpBtn.innerHTML = '<i class="fa-solid fa-check-double me-1"></i> Verify OTP';
+  }
+}
+
+verifyOtpBtn.addEventListener('click', doVerifyOtp);
+
+// Auto-trigger verify when 6 digits are typed
+otpInput.addEventListener('input', function() {
+  if (this.value.trim().length === 6 && !isEmailVerified) {
+    doVerifyOtp();
+  }
+});
+
+// Re-verify if email is changed
+emailInput.addEventListener('input', function() {
+  if (isEmailVerified) {
+    isEmailVerified = false;
+    emailVerifiedBadge.classList.add('d-none');
+    otpInput.classList.remove('is-valid');
+    otpFeedback.textContent = 'Email changed. Please request a new OTP.';
+    otpFeedback.className = 'form-text text-warning';
+    verifyOtpBtn.disabled = false;
+    verifyOtpBtn.className = 'btn btn-dark';
+    verifyOtpBtn.innerHTML = '<i class="fa-solid fa-check-double me-1"></i> Verify OTP';
+  }
+});
+
+// Form submission guard
+registerForm.addEventListener('submit', function(e) {
+  if (!isEmailVerified && otpInput.value.trim().length !== 6) {
+    e.preventDefault();
+    alert('Please verify your email address using the OTP code sent to your inbox before registering.');
+    otpInput.focus();
+  }
+});
+
+// Toggle registration password visibility
+const toggleRegPasswordBtn = document.getElementById('toggleRegPasswordBtn');
+const regPasswordInput = document.getElementById('regPasswordInput');
+const toggleRegPasswordIcon = document.getElementById('toggleRegPasswordIcon');
+
+if (toggleRegPasswordBtn && regPasswordInput && toggleRegPasswordIcon) {
+  toggleRegPasswordBtn.addEventListener('click', function() {
+    const isPassword = regPasswordInput.getAttribute('type') === 'password';
+    regPasswordInput.setAttribute('type', isPassword ? 'text' : 'password');
+    toggleRegPasswordIcon.className = isPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+  });
+}
+</script>
+{% endblock %}
